@@ -10,7 +10,7 @@ UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
-# --- 1. INISIALISASI DATABASE ---
+# --- 1. INISIALISASI & MIGRASI DATABASE ---
 def init_db():
     conn = sqlite3.connect("tailormate.db")
     c = conn.cursor()
@@ -25,12 +25,11 @@ def init_db():
                     lebar_bahu REAL,
                     catatan TEXT
                 )''')
-    # Tabel Pesanan (Ditambahkan kolom 'deskripsi_pesanan')
+    # Tabel Pesanan
     c.execute('''CREATE TABLE IF NOT EXISTS pesanan (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     pelanggan_id INTEGER,
                     jenis_pakaian TEXT,
-                    deskripsi_pesanan TEXT,
                     tgl_terima TEXT,
                     tgl_deadline TEXT,
                     status TEXT,
@@ -39,6 +38,13 @@ def init_db():
                     foto_desain TEXT,
                     FOREIGN KEY(pelanggan_id) REFERENCES pelanggan(id)
                 )''')
+    
+    # Migrasi otomatis: Tambah kolom deskripsi_pesanan jika belum ada
+    c.execute("PRAGMA table_info(pesanan)")
+    columns = [column[1] for column in c.fetchall()]
+    if "deskripsi_pesanan" not in columns:
+        c.execute("ALTER TABLE pesanan ADD COLUMN deskripsi_pesanan TEXT")
+        
     conn.commit()
     conn.close()
 
