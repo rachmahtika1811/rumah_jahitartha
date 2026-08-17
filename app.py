@@ -1,9 +1,9 @@
 import os
 import time
 import sqlite3
-import urllib.parse
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from PIL import Image
 from datetime import datetime
 
@@ -156,10 +156,10 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (360 E-COMMERCE UI PROMPT) ---
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI + COMPONENT 360 INTERAKTIF ---
 elif menu == "✨ Generator Desain Gemini AI":
     st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
-    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta VISUAL UI INTERAKTIF DENGAN TAMPILAN 360-DEGREE dari AI.")
+    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta TAMPILAN INTERAKTIF BAJU 360-DEGREE DRAG/SWIPE.")
 
     default_key = st.secrets.get("GEMINI_API_KEY", "")
     gemini_key = st.text_input("Masukkan Gemini API Key:", value=default_key, type="password", help="Dapatkan API Key gratis di aistudio.google.com")
@@ -176,7 +176,7 @@ elif menu == "✨ Generator Desain Gemini AI":
         if not gemini_key:
             st.error("Silakan masukkan Gemini API Key terlebih dahulu.")
         else:
-            with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan desain UI 360-degree..."):
+            with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan viewer 360 derajat..."):
                 try:
                     from google import genai
 
@@ -219,19 +219,225 @@ elif menu == "✨ Generator Desain Gemini AI":
                         st.markdown(response.text)
 
                         st.divider()
-                        st.markdown("### 🌐 Modern E-Commerce UI / UX (360-Degree Viewer)")
-                        
-                        # Integrasi Prompt UI E-Commerce 360-Degree Interaktif
-                        prompt_gambar = (
-                            f"Modern e-commerce product page UI UX design, displaying a clothing item ({kategori_pakaian}, style: {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}) "
-                            f"with a 360-degree interactive viewer. Include a small rotating arrow icon underneath the image to indicate drag-to-rotate functionality. "
-                            f"Clean layout, intuitive user interface, minimalist design, high resolution, web design template, 8k --ar 16:9"
-                        )
-                        prompt_encoded = urllib.parse.quote(prompt_gambar)
-                        image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=1280&height=720&nologo=true&model=flux"
+                        st.markdown("### 🔄 360° Interactive Product Viewer (Drag / Swipe untuk Memutar Baju)")
 
-                        st.image(image_url, caption=f"Desain Tampilan UI E-Commerce 360 Viewer: {kategori_pakaian}", use_container_width=True)
-                        st.success("Konsep desain dan antarmuka visual 360-degree berhasil dirancang!")
+                        # HTML, CSS, dan Vanilla JavaScript untuk Pemutar Baju 360 Derajat
+                        html_code_360 = f"""
+                        <!DOCTYPE html>
+                        <html lang="id">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                            <style>
+                                * {{
+                                    box-sizing: border-box;
+                                    margin: 0;
+                                    padding: 0;
+                                }}
+                                body {{
+                                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                                    background-color: #f8f9fa;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    padding: 20px;
+                                }}
+                                .product-card {{
+                                    background: #ffffff;
+                                    border-radius: 16px;
+                                    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+                                    width: 100%;
+                                    max-width: 600px;
+                                    overflow: hidden;
+                                    text-align: center;
+                                    padding: 24px;
+                                    border: 1px solid #eaeaea;
+                                }}
+                                .viewer-container {{
+                                    position: relative;
+                                    width: 100%;
+                                    height: 420px;
+                                    background: #f1f3f5;
+                                    border-radius: 12px;
+                                    cursor: grab;
+                                    overflow: hidden;
+                                    user-select: none;
+                                    touch-action: pan-y;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                }}
+                                .viewer-container:active {{
+                                    cursor: grabbing;
+                                }}
+                                .product-image {{
+                                    max-height: 90%;
+                                    max-width: 90%;
+                                    object-fit: contain;
+                                    pointer-events: none;
+                                    border-radius: 8px;
+                                }}
+                                .badge-360 {{
+                                    position: absolute;
+                                    top: 16px;
+                                    right: 16px;
+                                    background: rgba(0, 0, 0, 0.7);
+                                    color: #fff;
+                                    padding: 6px 14px;
+                                    border-radius: 20px;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    letter-spacing: 0.5px;
+                                }}
+                                .hint-overlay {{
+                                    position: absolute;
+                                    bottom: 16px;
+                                    left: 50%;
+                                    transform: translateX(-50%);
+                                    background: rgba(255, 255, 255, 0.9);
+                                    padding: 8px 16px;
+                                    border-radius: 20px;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 8px;
+                                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                                    animation: pulse 2s infinite;
+                                }}
+                                .hint-icon {{
+                                    width: 20px;
+                                    height: 20px;
+                                    animation: spin 4s linear infinite;
+                                }}
+                                .hint-text {{
+                                    font-size: 13px;
+                                    color: #333;
+                                    font-weight: 500;
+                                }}
+                                .product-info {{
+                                    margin-top: 20px;
+                                }}
+                                .product-title {{
+                                    font-size: 20px;
+                                    color: #212529;
+                                    font-weight: 700;
+                                    margin-bottom: 6px;
+                                }}
+                                .product-subtitle {{
+                                    font-size: 14px;
+                                    color: #6c757d;
+                                }}
+
+                                @keyframes spin {{
+                                    0% {{ transform: rotate(0deg); }}
+                                    100% {{ transform: rotate(360deg); }}
+                                }}
+                                @keyframes pulse {{
+                                    0% {{ transform: translateX(-50%) scale(1); }}
+                                    50% {{ transform: translateX(-50%) scale(1.05); }}
+                                    100% {{ transform: translateX(-50%) scale(1); }}
+                                }}
+                            </style>
+                        </head>
+                        <body>
+
+                            <div class="product-card">
+                                <div class="viewer-container" id="viewer">
+                                    <div class="badge-360">360° VIEW</div>
+                                    <img id="360-img" class="product-image" src="https://image.pollinations.ai/prompt/Isolated%20studio%20product%20photography,%20front%20view%20of%20a%20{urllib.parse.quote(kategori_pakaian)}%20on%20a%20tailor%20dress%20form%20mannequin,%20style%20{urllib.parse.quote(gaya_potongan)},%20color%20{urllib.parse.quote(warna_bahan)},%20no%20human?width=600&height=600&nologo=true" alt="Baju 360">
+                                    
+                                    <div class="hint-overlay" id="hint">
+                                        <svg class="hint-icon" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                                        </svg>
+                                        <span class="hint-text">Geser / Drag untuk Memutar 360°</span>
+                                    </div>
+                                </div>
+
+                                <div class="product-info">
+                                    <div class="product-title">{kategori_pakaian}</div>
+                                    <div class="product-subtitle">Gaya: {gaya_potongan} | Bahan: {warna_bahan}</div>
+                                </div>
+                            </div>
+
+                            <script>
+                                const angles = [
+                                    "front view",
+                                    "three quarter front view",
+                                    "side view right",
+                                    "three quarter back view",
+                                    "back view",
+                                    "three quarter back left view",
+                                    "side view left",
+                                    "three quarter front left view"
+                                ];
+
+                                const category = "{urllib.parse.quote(kategori_pakaian)}";
+                                const style = "{urllib.parse.quote(gaya_potongan)}";
+                                const fabric = "{urllib.parse.quote(warna_bahan)}";
+
+                                const images = angles.map(angle => 
+                                    `https://image.pollinations.ai/prompt/Isolated%20studio%20product%20photography,%20${{angle}}%20of%20a%20${{category}}%20on%20a%20tailor%20dress%20form%20mannequin,%20style%20${{style}},%20color%20${{fabric}},%20clean%20background,%20no%20human?width=600&height=600&nologo=true`
+                                );
+
+                                let currentIndex = 0;
+                                let isDragging = false;
+                                let startX = 0;
+
+                                const imgElement = document.getElementById('360-img');
+                                const viewer = document.getElementById('viewer');
+                                const hint = document.getElementById('hint');
+
+                                // Preload images
+                                images.forEach(src => {{
+                                    const img = new Image();
+                                    img.src = src;
+                                }});
+
+                                function updateImage(index) {{
+                                    imgElement.src = images[index];
+                                }}
+
+                                function handleStart(e) {{
+                                    isDragging = true;
+                                    startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                                    hint.style.opacity = '0';
+                                }}
+
+                                function handleMove(e) {{
+                                    if (!isDragging) return;
+                                    const currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                                    const diffX = startX - currentX;
+
+                                    if (Math.abs(diffX) > 20) {{
+                                        if (diffX > 0) {{
+                                            currentIndex = (currentIndex + 1) % images.length;
+                                        }} else {{
+                                            currentIndex = (currentIndex - 1 + images.length) % images.length;
+                                        }}
+                                        updateImage(currentIndex);
+                                        startX = currentX;
+                                    }}
+                                }}
+
+                                function handleEnd() {{
+                                    isDragging = false;
+                                }}
+
+                                viewer.addEventListener('mousedown', handleStart);
+                                window.addEventListener('mousemove', handleMove);
+                                window.addEventListener('mouseup', handleEnd);
+
+                                viewer.addEventListener('touchstart', handleStart);
+                                window.addEventListener('touchmove', handleMove);
+                                window.addEventListener('touchend', handleEnd);
+                            </script>
+                        </body>
+                        </html>
+                        """
+
+                        components.html(html_code_360, height=580)
+                        st.success("Konsep desain dan pemutar baju 360-degree interaktif berhasil dimuat!")
+
                     else:
                         st.error(f"Server Google AI sedang sangat padat (503). Silakan coba klik tombol kembali dalam beberapa detik. Detail: {last_error}")
 
@@ -270,7 +476,7 @@ elif menu == "Tambah Pelanggan & Ukuran":
                 st.error("Nama dan No Telepon wajib diisi.")
 
 # --- 7. MODUL: INPUT PESANAN & UPLOAD DESAIN ---
-elif menu == "Input Pesanan & Upload Desain":
+elif menu == "Input Pesanan & Upload DesAIN":
     st.subheader("🛍️ Input Pesanan Baru + Lampiran Foto Desain")
     
     conn = sqlite3.connect("tailormate.db")
