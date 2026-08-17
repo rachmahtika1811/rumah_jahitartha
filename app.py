@@ -221,12 +221,14 @@ elif menu == "✨ Generator Desain Gemini AI":
                         st.divider()
                         st.markdown("### 🖼️ Visualisasi Gambar Desain Baju (Katalog Studio)")
                         
-                        prompt_gambar = (
-                            f"Isolated studio product photography of a {kategori_pakaian} on a tailor dress form mannequin. "
-                            f"Style: {gaya_potongan}. Fabric and Color: {warna_bahan}. Details: {detail_desain}. "
-                            f"Clean neutral gray background, high-end fashion boutique display, "
-                            f"no human, no person, no woman, no girl, no face, 8k resolution, photorealistic fabric texture, sharp focus on sewing stitches."
-                        )
+                        # Ubah bagian prompt_gambar di Modul 5 menjadi:
+prompt_gambar = (
+    f"A professional fashion catalog grid layout showing four different views side-by-side of the same {kategori_pakaian}: "
+    f"front view, left side view, right side view, and back view. "
+    f"Style: {gaya_potongan}. Fabric and Color: {warna_bahan}. Details: {detail_desain}. "
+    f"All displayed on clean tailor dress form mannequins, studio lighting, clean neutral background, "
+    f"no human, no person, no woman, no girl, no face, 8k resolution, photorealistic fabric texture, sharp focus on sewing details."
+)
                         prompt_encoded = urllib.parse.quote(prompt_gambar)
                         image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true&model=flux"
 
