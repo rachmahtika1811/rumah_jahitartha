@@ -217,10 +217,10 @@ elif menu == "✨ Generator Desain Gemini AI":
                     st.markdown("### 🖼️ Visualisasi Gambar Desain Otomatis")
                     
                     prompt_gambar = (
-                        f"A ultra-realistic professional fashion photography catalog shot of a {kategori_pakaian}, "
-                        f"style {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}. "
-                        f"Displayed on a headless elegant dress form mannequin in a clean minimalist fashion studio, "
-                        f"soft studio lighting, 8k resolution, photorealistic fabric texture, sharp details, no human face."
+                        f"Isolated studio product photography of a {kategori_pakaian} on a tailor dress form mannequin. "
+                        f"Style: {gaya_potongan}. Fabric and Color: {warna_bahan}. Details: {detail_desain}. "
+                        f"Clean neutral gray background, high-end fashion boutique display, "
+                        f"no human, no person, no woman, no girl, no face, 8k resolution, photorealistic fabric texture, sharp focus on sewing stitches."
                     )
                     prompt_encoded = urllib.parse.quote(prompt_gambar)
                     image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true&model=flux"
