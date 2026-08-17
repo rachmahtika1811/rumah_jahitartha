@@ -195,9 +195,9 @@ elif menu == "✨ Generator Desain Gemini AI":
                     4. Prompt Gambar Studio (Bahasa Inggris) jika ingin digenerate ke gambar
                     """
 
-                    # Pemanggilan model terbaru yang kompatibel
+                    # Menggunakan nama model terbaru yang diminta oleh API
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.6-flash',
                         contents=prompt_teks,
                     )
 
