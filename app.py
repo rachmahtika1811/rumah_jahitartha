@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import urllib.parse
 import pandas as pd
 import streamlit as st
 from PIL import Image
@@ -67,7 +66,7 @@ menu = st.sidebar.radio(
     [
         "Dashboard & Status Pesanan", 
         "🎨 Galeri Desain Baju", 
-        "✨ Generator Desain AI (Gratis)",
+        "✨ Generator Desain Gemini AI",
         "Tambah Pelanggan & Ukuran", 
         "Input Pesanan & Upload Desain", 
         "Data Pelanggan"
@@ -155,10 +154,14 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN AI (100% GRATIS) ---
-elif menu == "✨ Generator Desain AI (Gratis)":
-    st.subheader("✨ Generator Referensi Desain Baju (100% Gratis)")
-    st.info("💡 Layanan AI ini sepenuhnya gratis dan tidak memerlukan API Key / pendaftaran.")
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI ---
+elif menu == "✨ Generator Desain Gemini AI":
+    st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
+    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan langsung dari Google Gemini AI.")
+
+    # Membaca API Key dari Secrets Streamlit atau Input Manual
+    default_key = st.secrets.get("GEMINI_API_KEY", "")
+    gemini_key = st.text_input("Masukkan Gemini API Key:", value=default_key, type="password", help="Dapatkan API Key gratis di aistudio.google.com")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -168,20 +171,40 @@ elif menu == "✨ Generator Desain AI (Gratis)":
         gaya_potongan = st.selectbox("Gaya / Model Potongan", ["A-Line Dress", "Slim Fit", "Lengan Balon / Puff", "Mermaid Style", "Modern Minimalist"])
         detail_desain = st.text_area("Detail Dekorasi / Aksesoris", "Payet mutiara di bagian dada dan kerah, potongan V-neck")
 
-    # Membuat deskripsi gambar dalam Bahasa Inggris untuk AI
-    prompt_teks = f"Professional realistic photo of a luxury {kategori_pakaian}, style {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}, studio light, fashion mannequin display, 8k resolution"
+    if st.button("✨ Analisis & Dapatkan Rekomendasi Desain Gemini"):
+        if not gemini_key:
+            st.error("Silakan masukkan Gemini API Key terlebih dahulu.")
+        else:
+            with st.spinner("Gemini AI sedang merancang konsep dan rekomendasi teknis busana Anda..."):
+                try:
+                    from google import genai
 
-    if st.button("✨ Hasilkan Gambar Desain Gratis"):
-        with st.spinner("AI gratis sedang merancang gambar desain baju Anda... Mohon tunggu beberapa detik..."):
-            try:
-                # Menggunakan layanan Pollinations AI (Gratis & Tanpa API Key)
-                prompt_encoded = urllib.parse.quote(prompt_teks)
-                image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true"
-                
-                st.image(image_url, caption="Hasil Generasi Desain AI Gratis", use_container_width=True)
-                st.success("Gambar berhasil dibuat! Klik kanan pada gambar (atau tekan lama jika di HP) untuk menyimpan gambar.")
-            except Exception as e:
-                st.error(f"Gagal memuat gambar: {e}")
+                    client = genai.Client(api_key=gemini_key)
+                    prompt_teks = f"""
+                    Anda adalah asisten desainer tata busana profesional untuk penjahit 'Rumah Jahit Artha'.
+                    Buatkan konsep desain rinci dan panduan teknis penjahitan untuk pesanan berikut:
+                    - Jenis Busana: {kategori_pakaian}
+                    - Warna & Bahan Kain: {warna_bahan}
+                    - Model/Potongan: {gaya_potongan}
+                    - Detail Aksesoris/Payet: {detail_desain}
+
+                    Tolong berikan output terstruktur dalam Bahasa Indonesia yang mencakup:
+                    1. Deskripsi Visual Konsep Busana
+                    2. Saran Pemilihan Jenis Kain & Aksesoris Tambahan
+                    3. Catatan Teknis Penjahitan & Pemotongan Pola (Penting untuk Penjahit)
+                    4. Prompt Gambar Studio (Bahasa Inggris) jika ingin digenerate ke gambar
+                    """
+
+                    response = client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt_teks,
+                    )
+
+                    st.markdown("### 📋 Hasil Rekomendasi Desain dari Gemini AI")
+                    st.markdown(response.text)
+                    st.success("Konsep desain berhasil dirancang oleh Gemini AI!")
+                except Exception as e:
+                    st.error(f"Gagal menghubungkan ke Gemini AI: {e}")
 
 # --- 6. MODUL: TAMBAH PELANGGAN ---
 elif menu == "Tambah Pelanggan & Ukuran":
