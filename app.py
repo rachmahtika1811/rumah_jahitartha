@@ -156,10 +156,10 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (KHUSUS MANEKIN + RETRY LOGIC) ---
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (INTERACTIVE MULTI-VIEW SLIDER) ---
 elif menu == "✨ Generator Desain Gemini AI":
     st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
-    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta GAMBAR VISUAL otomatis dari AI.")
+    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta VISUAL INTERAKTIF MULTI-SUDUT dari AI.")
 
     default_key = st.secrets.get("GEMINI_API_KEY", "")
     gemini_key = st.text_input("Masukkan Gemini API Key:", value=default_key, type="password", help="Dapatkan API Key gratis di aistudio.google.com")
@@ -219,20 +219,31 @@ elif menu == "✨ Generator Desain Gemini AI":
                         st.markdown(response.text)
 
                         st.divider()
-                        st.markdown("### 🖼️ Visualisasi Gambar Desain Baju (Katalog Studio)")
+                        st.markdown("### 🔄 Visualisasi Baju Multi-Sudut (Ganti Sudut Pandang)")
                         
-                        prompt_gambar = (
-                            f"A professional fashion catalog grid layout showing four different views side-by-side of the same {kategori_pakaian}: "
-                            f"front view, left side view, right side view, and back view. "
-                            f"Style: {gaya_potongan}. Fabric and Color: {warna_bahan}. Details: {detail_desain}. "
-                            f"All displayed on clean tailor dress form mannequins, studio lighting, clean neutral background, "
-                            f"no human, no person, no woman, no girl, no face, 8k resolution, photorealistic fabric texture, sharp focus on sewing details, real picture."
-                        )
-                        prompt_encoded = urllib.parse.quote(prompt_gambar)
-                        image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true&model=flux"
+                        # Generate 3 Sudut Pandang Berbeda
+                        views = {
+                            "Tampak Depan": "front view",
+                            "Tampak Samping": "side view angle",
+                            "Tampak Belakang": "back view"
+                        }
+                        
+                        tabs = st.tabs(list(views.keys()))
+                        
+                        for i, (view_label, view_prompt) in enumerate(views.items()):
+                            with tabs[i]:
+                                prompt_gambar = (
+                                    f"Isolated studio product photography, {view_prompt} of a {kategori_pakaian} on a tailor dress form mannequin. "
+                                    f"Style: {gaya_potongan}. Fabric and Color: {warna_bahan}. Details: {detail_desain}. "
+                                    f"Clean neutral gray studio background, high-end fashion boutique display, "
+                                    f"no human, no person, no woman, no girl, no face, 8k resolution, photorealistic fabric texture, sharp focus."
+                                )
+                                prompt_encoded = urllib.parse.quote(prompt_gambar)
+                                image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true&model=flux&seed={i*10}"
+                                
+                                st.image(image_url, caption=f"Visual {view_label}: {kategori_pakaian}", use_container_width=True)
 
-                        st.image(image_url, caption=f"Foto Katalog Baju: {kategori_pakaian} ({gaya_potongan})", use_container_width=True)
-                        st.success("Konsep desain dan foto produk baju berhasil dirancang!")
+                        st.success("Konsep desain dan foto multi-sudut berhasil dirancang!")
                     else:
                         st.error(f"Server Google AI sedang sangat padat (503). Silakan coba klik tombol kembali dalam beberapa detik. Detail: {last_error}")
 
