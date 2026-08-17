@@ -1,16 +1,32 @@
 import os
 import time
 import sqlite3
+import requests
 import urllib.parse
 import pandas as pd
 import streamlit as st
 from PIL import Image
+from io import BytesIO
 from datetime import datetime
 
 # Directori folder untuk menyimpan foto baju/desain
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
+
+# --- FUNGSI AMAN UNTUK MEMUAT GAMBAR AI ---
+def load_ai_image(prompt_str, seed=1):
+    prompt_enc = urllib.parse.quote(prompt_str)
+    url = f"https://image.pollinations.ai/prompt/{prompt_enc}?width=800&height=800&nologo=true&seed={seed}"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+    try:
+        res = requests.get(url, headers=headers, timeout=12)
+        if res.status_code == 200:
+            return Image.open(BytesIO(res.content))
+        else:
+            return None
+    except Exception:
+        return None
 
 # --- 1. INISIALISASI & MIGRASI DATABASE ---
 def init_db():
@@ -156,10 +172,10 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (VISUAL KATALOG MULTI-SUDUT INSTAN) ---
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (SERVER-SIDE FETCHING GAMBAR REALISTIS) ---
 elif menu == "✨ Generator Desain Gemini AI":
     st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
-    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta VISUAL BAJU REALISTIS DARI BERBAGAI SUDUT.")
+    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta VISUAL BAJU REALISTIS MULTI-SUDUT.")
 
     default_key = st.secrets.get("GEMINI_API_KEY", "")
     gemini_key = st.text_input("Masukkan Gemini API Key:", value=default_key, type="password", help="Dapatkan API Key gratis di aistudio.google.com")
@@ -176,7 +192,7 @@ elif menu == "✨ Generator Desain Gemini AI":
         if not gemini_key:
             st.error("Silakan masukkan Gemini API Key terlebih dahulu.")
         else:
-            with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan gambar visual..."):
+            with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan mengunduh foto visual..."):
                 try:
                     from google import genai
 
@@ -219,7 +235,7 @@ elif menu == "✨ Generator Desain Gemini AI":
                         st.markdown(response.text)
 
                         st.divider()
-                        st.markdown("### 🖼️ Visualisasi Baju 360° Multi-Sudut")
+                        st.markdown("### 🖼️ Visualisasi Baju Multi-Sudut (Hasil Render AI)")
 
                         # Tab Pilihan Sudut Pandang Baju
                         tab1, tab2, tab3 = st.tabs(["📸 Tampak Depan", "📸 Tampak Samping", "📸 Tampak Belakang"])
@@ -227,18 +243,27 @@ elif menu == "✨ Generator Desain Gemini AI":
                         prompt_base = f"Isolated studio fashion photography of a {kategori_pakaian} on a tailor dress form mannequin, style {gaya_potongan}, fabric {warna_bahan}, {detail_desain}, clean gray background, no human, no face, 8k resolution, photorealistic."
 
                         with tab1:
-                            url_depan = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt_base + ' front view')}?width=800&height=800&nologo=true&seed=1"
-                            st.image(url_depan, caption=f"Tampak Depan: {kategori_pakaian}", use_container_width=True)
+                            img_depan = load_ai_image(prompt_base + " front view", seed=10)
+                            if img_depan:
+                                st.image(img_depan, caption=f"Tampak Depan: {kategori_pakaian}", use_container_width=True)
+                            else:
+                                st.warning("Gagal memuat gambar tampak depan. Silakan tekan tombol lagi.")
 
                         with tab2:
-                            url_samping = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt_base + ' side view profile angle')}?width=800&height=800&nologo=true&seed=2"
-                            st.image(url_samping, caption=f"Tampak Samping: {kategori_pakaian}", use_container_width=True)
+                            img_samping = load_ai_image(prompt_base + " side profile view", seed=20)
+                            if img_samping:
+                                st.image(img_samping, caption=f"Tampak Samping: {kategori_pakaian}", use_container_width=True)
+                            else:
+                                st.warning("Gagal memuat gambar tampak samping. Silakan tekan tombol lagi.")
 
                         with tab3:
-                            url_belakang = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt_base + ' back view')}?width=800&height=800&nologo=true&seed=3"
-                            st.image(url_belakang, caption=f"Tampak Belakang: {kategori_pakaian}", use_container_width=True)
+                            img_belakang = load_ai_image(prompt_base + " back view", seed=30)
+                            if img_belakang:
+                                st.image(img_belakang, caption=f"Tampak Belakang: {kategori_pakaian}", use_container_width=True)
+                            else:
+                                st.warning("Gagal memuat gambar tampak belakang. Silakan tekan tombol lagi.")
 
-                        st.success("Konsep desain dan visualisasi multi-sudut berhasil dirancang!")
+                        st.success("Konsep desain dan foto produk baju berhasil dirancang oleh AI!")
 
                     else:
                         st.error(f"Server Google AI sedang sangat padat (503). Silakan coba klik tombol kembali dalam beberapa detik. Detail: {last_error}")
