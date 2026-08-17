@@ -155,7 +155,7 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (gemini-3.6-flash) & GAMBAR OTOMATIS ---
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI + GAMBAR OTOMATIS ---
 elif menu == "✨ Generator Desain Gemini AI":
     st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
     st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta GAMBAR VISUAL otomatis dari AI.")
@@ -178,9 +178,10 @@ elif menu == "✨ Generator Desain Gemini AI":
         else:
             with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan gambar visual..."):
                 try:
-                    from google import genai
+                    import google.generativeai as genai
 
-                    client = genai.Client(api_key=gemini_key)
+                    genai.configure(api_key=gemini_key)
+
                     prompt_teks = f"""
                     Anda adalah asisten desainer tata busana profesional untuk penjahit 'Rumah Jahit Artha'.
                     Buatkan konsep desain rinci dan panduan teknis penjahitan untuk pesanan berikut:
@@ -195,18 +196,27 @@ elif menu == "✨ Generator Desain Gemini AI":
                     3. Catatan Teknis Penjahitan & Pemotongan Pola (Penting untuk Penjahit)
                     """
 
-                    # Menggunakan model gemini-3.6-flash
-                    response = client.models.generate_content(
-                        model='gemini-3.6-flash',
-                        contents=prompt_teks,
-                    )
+                    # Menggunakan SDK generativeai resmi
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    response = model.generate_content(prompt_teks)
 
                     st.markdown("### 📋 Hasil Rekomendasi Desain & Panduan Penjahitan")
                     st.markdown(response.text)
 
-                    # Pembuatan Gambar Visual Otomatis
-                    st.divider()
-                    st.markdown("### 🖼️ Visualisasi Gambar Desain Otomatis")
+                    prompt_gambar = (
+                        f"A ultra-realistic professional fashion photography catalog shot of a {kategori_pakaian}, "
+                        f"style {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}. "
+                        f"Displayed on a headless elegant dress form mannequin in a clean minimalist fashion studio, "
+                        f"soft studio lighting, 8k resolution, photorealistic fabric texture, sharp details, no human face."
+                    )
+                    prompt_encoded = urllib.parse.quote(prompt_gambar)
+                    image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true&model=flux"
+
+                    st.image(image_url, caption=f"Visualisasi Desain Realistis: {kategori_pakaian} ({gaya_potongan})", use_container_width=True)
+                    st.success("Konsep desain dan gambar visual fotorealistis berhasil dirancang oleh AI!")
+
+                except Exception as e:
+                    st.error(f"Gagal menghubungkan ke Gemini AI: {e}")
                     
                     prompt_gambar = f"Professional realistic fashion photography of {kategori_pakaian}, style {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}, studio lighting, mannequin display, 8k resolution"
                     prompt_encoded = urllib.parse.quote(prompt_gambar)
