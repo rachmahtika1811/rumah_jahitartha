@@ -156,10 +156,10 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (INTERACTIVE MULTI-VIEW SLIDER) ---
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (360 E-COMMERCE UI PROMPT) ---
 elif menu == "✨ Generator Desain Gemini AI":
     st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
-    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta VISUAL INTERAKTIF MULTI-SUDUT dari AI.")
+    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta VISUAL UI INTERAKTIF DENGAN TAMPILAN 360-DEGREE dari AI.")
 
     default_key = st.secrets.get("GEMINI_API_KEY", "")
     gemini_key = st.text_input("Masukkan Gemini API Key:", value=default_key, type="password", help="Dapatkan API Key gratis di aistudio.google.com")
@@ -176,7 +176,7 @@ elif menu == "✨ Generator Desain Gemini AI":
         if not gemini_key:
             st.error("Silakan masukkan Gemini API Key terlebih dahulu.")
         else:
-            with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan gambar visual..."):
+            with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan desain UI 360-degree..."):
                 try:
                     from google import genai
 
@@ -219,31 +219,19 @@ elif menu == "✨ Generator Desain Gemini AI":
                         st.markdown(response.text)
 
                         st.divider()
-                        st.markdown("### 🔄 Visualisasi Baju Multi-Sudut (Ganti Sudut Pandang)")
+                        st.markdown("### 🌐 Modern E-Commerce UI / UX (360-Degree Viewer)")
                         
-                        # Generate 3 Sudut Pandang Berbeda
-                        views = {
-                            "Tampak Depan": "front view",
-                            "Tampak Samping": "side view angle",
-                            "Tampak Belakang": "back view"
-                        }
-                        
-                        tabs = st.tabs(list(views.keys()))
-                        
-                        for i, (view_label, view_prompt) in enumerate(views.items()):
-                            with tabs[i]:
-                                prompt_gambar = (
-                                    f"Isolated studio product photography, {view_prompt} of a {kategori_pakaian} on a tailor dress form mannequin. "
-                                    f"Style: {gaya_potongan}. Fabric and Color: {warna_bahan}. Details: {detail_desain}. "
-                                    f"Clean neutral gray studio background, high-end fashion boutique display, "
-                                    f"no human, no person, no woman, no girl, no face, 8k resolution, photorealistic fabric texture, sharp focus."
-                                )
-                                prompt_encoded = urllib.parse.quote(prompt_gambar)
-                                image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true&model=flux&seed={i*10}"
-                                
-                                st.image(image_url, caption=f"Visual {view_label}: {kategori_pakaian}", use_container_width=True)
+                        # Integrasi Prompt UI E-Commerce 360-Degree Interaktif
+                        prompt_gambar = (
+                            f"Modern e-commerce product page UI UX design, displaying a clothing item ({kategori_pakaian}, style: {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}) "
+                            f"with a 360-degree interactive viewer. Include a small rotating arrow icon underneath the image to indicate drag-to-rotate functionality. "
+                            f"Clean layout, intuitive user interface, minimalist design, high resolution, web design template, 8k --ar 16:9"
+                        )
+                        prompt_encoded = urllib.parse.quote(prompt_gambar)
+                        image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=1280&height=720&nologo=true&model=flux"
 
-                        st.success("Konsep desain dan foto multi-sudut berhasil dirancang!")
+                        st.image(image_url, caption=f"Desain Tampilan UI E-Commerce 360 Viewer: {kategori_pakaian}", use_container_width=True)
+                        st.success("Konsep desain dan antarmuka visual 360-degree berhasil dirancang!")
                     else:
                         st.error(f"Server Google AI sedang sangat padat (503). Silakan coba klik tombol kembali dalam beberapa detik. Detail: {last_error}")
 
