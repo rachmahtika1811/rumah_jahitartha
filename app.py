@@ -155,7 +155,7 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI & GAMBAR OTOMATIS ---
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (gemini-3.6-flash) & GAMBAR OTOMATIS ---
 elif menu == "✨ Generator Desain Gemini AI":
     st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
     st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta GAMBAR VISUAL otomatis dari AI.")
@@ -195,9 +195,9 @@ elif menu == "✨ Generator Desain Gemini AI":
                     3. Catatan Teknis Penjahitan & Pemotongan Pola (Penting untuk Penjahit)
                     """
 
-                    # Pemanggilan model Gemini untuk analisis teks
+                    # Menggunakan model gemini-3.6-flash
                     response = client.models.generate_content(
-                        model='gemini-2.5-flash',
+                        model='gemini-3.6-flash',
                         contents=prompt_teks,
                     )
 
