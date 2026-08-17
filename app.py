@@ -25,11 +25,12 @@ def init_db():
                     lebar_bahu REAL,
                     catatan TEXT
                 )''')
-    # Tabel Pesanan (Ditambahkan kolom 'foto_desain')
+    # Tabel Pesanan (Ditambahkan kolom 'deskripsi_pesanan')
     c.execute('''CREATE TABLE IF NOT EXISTS pesanan (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     pelanggan_id INTEGER,
                     jenis_pakaian TEXT,
+                    deskripsi_pesanan TEXT,
                     tgl_terima TEXT,
                     tgl_deadline TEXT,
                     status TEXT,
@@ -43,11 +44,17 @@ def init_db():
 
 init_db()
 
-# --- 2. KONFIGURASI HALAMAN ---
-st.set_page_config(page_title="TailorMate - Manajemen Desain & Pesanan", layout="wide")
-st.title("🪡 TailorMate: Sistem Manajemen & Galeri Desain Penjahit")
+# --- 2. KONFIGURASI HALAMAN & SIDEBAR ---
+st.set_page_config(page_title="Rumah Jahit Artha - Manajemen Desain & Pesanan", layout="wide")
+st.title("🪡 Rumah Jahit Artha: Sistem Manajemen & Galeri Desain Penjahit")
 
-# Sidebar Navigasi
+# Deskripsi usaha di sidebar
+st.sidebar.title("📍 Rumah Jahit Artha")
+st.sidebar.caption("Custom Made By Order | Graduation | Engagement | Bridesmaid | Kemeja Cowo | Vermak Pakaian")
+st.sidebar.markdown("**Lokasi:** Perum. Grand Kampoeng Kito (Paal Merah), Jambi")
+st.sidebar.divider()
+
+# Sidebar Navigasi Utama
 menu = st.sidebar.radio(
     "Navigasi Utama", 
     [
@@ -64,7 +71,7 @@ if menu == "Dashboard & Status Pesanan":
     st.subheader("📌 Status & Alur Produksi Pesanan")
     
     conn = sqlite3.connect("tailormate.db")
-    query = '''SELECT p.id, pl.nama, p.jenis_pakaian, p.tgl_deadline, p.status, p.total_biaya, p.dp, p.foto_desain 
+    query = '''SELECT p.id, pl.nama, p.jenis_pakaian, p.deskripsi_pesanan, p.tgl_deadline, p.status, p.total_biaya, p.dp, p.foto_desain 
                FROM pesanan p JOIN pelanggan pl ON p.pelanggan_id = pl.id'''
     df_pesanan = pd.read_sql_query(query, conn)
     conn.close()
@@ -99,12 +106,12 @@ if menu == "Dashboard & Status Pesanan":
     else:
         st.info("Belum ada data pesanan.")
 
-# --- 4. MODUL BARU: GALERI DESAIN BAJU ---
+# --- 4. MODUL: GALERI DESAIN BAJU ---
 elif menu == "🎨 Galeri Desain Baju":
     st.subheader("🖼️ Galeri Visual Desain & Referensi Pola Baju")
     
     conn = sqlite3.connect("tailormate.db")
-    query = '''SELECT p.id, pl.nama, p.jenis_pakaian, p.tgl_deadline, p.status, p.foto_desain,
+    query = '''SELECT p.id, pl.nama, p.jenis_pakaian, p.deskripsi_pesanan, p.tgl_deadline, p.status, p.foto_desain,
                       pl.lingkar_dada, pl.lingkar_pinggang, pl.panjang_lengan, pl.lebar_bahu
                FROM pesanan p JOIN pelanggan pl ON p.pelanggan_id = pl.id 
                WHERE p.foto_desain IS NOT NULL AND p.foto_desain != '' '''
@@ -127,6 +134,8 @@ elif menu == "🎨 Galeri Desain Baju":
                     
                     st.markdown(f"**Pelanggan:** {row['nama']}")
                     st.markdown(f"**Jenis:** {row['jenis_pakaian']}")
+                    if row['deskripsi_pesanan']:
+                        st.markdown(f"**Deskripsi:** {row['deskripsi_pesanan']}")
                     st.markdown(f"**Status:** `{row['status']}` | **Deadline:** {row['tgl_deadline']}")
                     
                     # Expander Detail Ukuran Pelanggan
@@ -185,7 +194,8 @@ elif menu == "Input Pesanan & Upload Desain":
         with st.form("form_pesanan"):
             col1, col2 = st.columns(2)
             with col1:
-                jenis_pakaian = st.selectbox("Jenis Pakaian", ["Kemeja Pria", "Gaun/Pesta", "Celana Formal", "Batik", "Jas", "Kebayang", "Lainnya"])
+                jenis_pakaian = st.selectbox("Jenis Pakaian", ["Kemeja Pria", "Gaun/Pesta", "Celana Formal", "Batik", "Jas", "Kebaya", "Lainnya"])
+                deskripsi_pesanan = st.text_area("Deskripsi Tambahan Pesanan (Model, Payet, Pilihan Kain, dll.)")
                 tgl_terima = st.date_input("Tanggal Terima", datetime.now())
                 tgl_deadline = st.date_input("Tanggal Selesai (Deadline)")
                 
@@ -214,9 +224,9 @@ elif menu == "Input Pesanan & Upload Desain":
                 conn = sqlite3.connect("tailormate.db")
                 c = conn.cursor()
                 c.execute('''INSERT INTO pesanan 
-                             (pelanggan_id, jenis_pakaian, tgl_terima, tgl_deadline, status, total_biaya, dp, foto_desain)
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-                          (pelanggan_id, jenis_pakaian, str(tgl_terima), str(tgl_deadline), "Diterima", total_biaya, dp, filename))
+                             (pelanggan_id, jenis_pakaian, deskripsi_pesanan, tgl_terima, tgl_deadline, status, total_biaya, dp, foto_desain)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                          (pelanggan_id, jenis_pakaian, deskripsi_pesanan, str(tgl_terima), str(tgl_deadline), "Diterima", total_biaya, dp, filename))
                 conn.commit()
                 conn.close()
                 st.success("Pesanan dan foto desain berhasil tersimpan!")
