@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import urllib.parse
 import pandas as pd
 import streamlit as st
 from PIL import Image
@@ -154,10 +155,10 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI ---
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI & GAMBAR OTOMATIS ---
 elif menu == "✨ Generator Desain Gemini AI":
     st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
-    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan langsung dari Google Gemini AI.")
+    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta GAMBAR VISUAL otomatis dari AI.")
 
     # Membaca API Key dari Secrets Streamlit atau Input Manual
     default_key = st.secrets.get("GEMINI_API_KEY", "")
@@ -175,7 +176,7 @@ elif menu == "✨ Generator Desain Gemini AI":
         if not gemini_key:
             st.error("Silakan masukkan Gemini API Key terlebih dahulu.")
         else:
-            with st.spinner("Gemini AI sedang merancang konsep dan rekomendasi teknis busana Anda..."):
+            with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan gambar visual..."):
                 try:
                     from google import genai
 
@@ -192,18 +193,28 @@ elif menu == "✨ Generator Desain Gemini AI":
                     1. Deskripsi Visual Konsep Busana
                     2. Saran Pemilihan Jenis Kain & Aksesoris Tambahan
                     3. Catatan Teknis Penjahitan & Pemotongan Pola (Penting untuk Penjahit)
-                    4. Prompt Gambar Studio (Bahasa Inggris) jika ingin digenerate ke gambar
                     """
 
-                    # Menggunakan nama model terbaru yang diminta oleh API
+                    # Pemanggilan model Gemini untuk analisis teks
                     response = client.models.generate_content(
-                        model='gemini-3.6-flash',
+                        model='gemini-2.5-flash',
                         contents=prompt_teks,
                     )
 
-                    st.markdown("### 📋 Hasil Rekomendasi Desain dari Gemini AI")
+                    st.markdown("### 📋 Hasil Rekomendasi Desain & Panduan Penjahitan")
                     st.markdown(response.text)
-                    st.success("Konsep desain berhasil dirancang oleh Gemini AI!")
+
+                    # Pembuatan Gambar Visual Otomatis
+                    st.divider()
+                    st.markdown("### 🖼️ Visualisasi Gambar Desain Otomatis")
+                    
+                    prompt_gambar = f"Professional realistic fashion photography of {kategori_pakaian}, style {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}, studio lighting, mannequin display, 8k resolution"
+                    prompt_encoded = urllib.parse.quote(prompt_gambar)
+                    image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true"
+
+                    st.image(image_url, caption=f"Visualisasi Desain: {kategori_pakaian} ({gaya_potongan})", use_container_width=True)
+                    st.success("Konsep desain dan gambar visual berhasil dirancang oleh AI!")
+
                 except Exception as e:
                     st.error(f"Gagal menghubungkan ke Gemini AI: {e}")
 
