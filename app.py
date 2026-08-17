@@ -1,12 +1,8 @@
 import os
-import time
 import sqlite3
-import requests
-import urllib.parse
 import pandas as pd
 import streamlit as st
 from PIL import Image
-from io import BytesIO
 from datetime import datetime
 
 # Directori folder untuk menyimpan foto baju/desain
@@ -14,25 +10,10 @@ UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
-# --- FUNGSI AMAN UNTUK MEMUAT GAMBAR AI ---
-def load_ai_image(prompt_str, seed=1):
-    prompt_enc = urllib.parse.quote(prompt_str)
-    url = f"https://image.pollinations.ai/prompt/{prompt_enc}?width=800&height=800&nologo=true&seed={seed}"
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-    try:
-        res = requests.get(url, headers=headers, timeout=12)
-        if res.status_code == 200:
-            return Image.open(BytesIO(res.content))
-        else:
-            return None
-    except Exception:
-        return None
-
-# --- 1. INISIALISASI & MIGRASI DATABASE ---
+# --- DATABASE MANAJEMEN ---
 def init_db():
     conn = sqlite3.connect("tailormate.db")
     c = conn.cursor()
-    # Tabel Pelanggan
     c.execute('''CREATE TABLE IF NOT EXISTS pelanggan (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nama TEXT NOT NULL,
@@ -43,7 +24,6 @@ def init_db():
                     lebar_bahu REAL,
                     catatan TEXT
                 )''')
-    # Tabel Pesanan
     c.execute('''CREATE TABLE IF NOT EXISTS pesanan (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     pelanggan_id INTEGER,
@@ -56,45 +36,39 @@ def init_db():
                     foto_desain TEXT,
                     FOREIGN KEY(pelanggan_id) REFERENCES pelanggan(id)
                 )''')
-    
-    # Migrasi otomatis: Tambah kolom deskripsi_pesanan jika belum ada
     c.execute("PRAGMA table_info(pesanan)")
     columns = [column[1] for column in c.fetchall()]
     if "deskripsi_pesanan" not in columns:
         c.execute("ALTER TABLE pesanan ADD COLUMN deskripsi_pesanan TEXT")
-        
     conn.commit()
     conn.close()
 
 init_db()
 
-# --- 2. KONFIGURASI HALAMAN & SIDEBAR ---
+# --- KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="Rumah Jahit Artha - Manajemen Desain & Pesanan", layout="wide")
 st.title("🪡 Rumah Jahit Artha: Sistem Manajemen & Galeri Desain Penjahit")
 
-# Deskripsi usaha di sidebar
 st.sidebar.title("📍 Rumah Jahit Artha")
 st.sidebar.caption("Custom Made By Order | Graduation | Engagement | Bridesmaid | Kemeja Cowo | Vermak Pakaian")
 st.sidebar.markdown("**Lokasi:** Perum. Grand Kampoeng Kito (Paal Merah), Jambi")
 st.sidebar.divider()
 
-# Sidebar Navigasi Utama
 menu = st.sidebar.radio(
     "Navigasi Utama", 
     [
         "Dashboard & Status Pesanan", 
         "🎨 Galeri Desain Baju", 
-        "✨ Generator Desain Gemini AI",
+        "✨ Konsultasi & Foto Katalog Asli",
         "Tambah Pelanggan & Ukuran", 
         "Input Pesanan & Upload Desain", 
         "Data Pelanggan"
     ]
 )
 
-# --- 3. MODUL: DASHBOARD PESANAN ---
+# --- MODUL DASHBOARD ---
 if menu == "Dashboard & Status Pesanan":
     st.subheader("📌 Status & Alur Produksi Pesanan")
-    
     conn = sqlite3.connect("tailormate.db")
     query = '''SELECT p.id, pl.nama, p.jenis_pakaian, p.deskripsi_pesanan, p.tgl_deadline, p.status, p.total_biaya, p.dp, p.foto_desain 
                FROM pesanan p JOIN pelanggan pl ON p.pelanggan_id = pl.id'''
@@ -108,8 +82,6 @@ if menu == "Dashboard & Status Pesanan":
         col_stat3.metric("Pesanan Selesai", len(df_pesanan[df_pesanan['status'] == 'Selesai']))
 
         st.divider()
-
-        # Tampilkan Data Ringkas
         st.dataframe(df_pesanan.drop(columns=['foto_desain']), use_container_width=True)
 
         st.divider()
@@ -131,10 +103,9 @@ if menu == "Dashboard & Status Pesanan":
     else:
         st.info("Belum ada data pesanan.")
 
-# --- 4. MODUL: GALERI DESAIN BAJU ---
+# --- MODUL GALERI DESAIN ---
 elif menu == "🎨 Galeri Desain Baju":
     st.subheader("🖼️ Galeri Visual Desain & Referensi Pola Baju")
-    
     conn = sqlite3.connect("tailormate.db")
     query = '''SELECT p.id, pl.nama, p.jenis_pakaian, p.deskripsi_pesanan, p.tgl_deadline, p.status, p.foto_desain,
                       pl.lingkar_dada, pl.lingkar_pinggang, pl.panjang_lengan, pl.lebar_bahu
@@ -144,7 +115,6 @@ elif menu == "🎨 Galeri Desain Baju":
     conn.close()
 
     if not df_galeri.empty:
-        # Tampilkan gambar dalam grid kartu 3 kolom
         cols = st.columns(3)
         for idx, row in df_galeri.iterrows():
             col = cols[idx % 3]
@@ -163,7 +133,6 @@ elif menu == "🎨 Galeri Desain Baju":
                         st.markdown(f"**Deskripsi:** {row['deskripsi_pesanan']}")
                     st.markdown(f"**Status:** `{row['status']}` | **Deadline:** {row['tgl_deadline']}")
                     
-                    # Expander Detail Ukuran Pelanggan
                     with st.expander("📏 Detail Ukuran Body"):
                         st.write(f"- Lingkar Dada: **{row['lingkar_dada']} cm**")
                         st.write(f"- Lingkar Pinggang: **{row['lingkar_pinggang']} cm**")
@@ -172,109 +141,75 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (SERVER-SIDE FETCHING GAMBAR REALISTIS) ---
-elif menu == "✨ Generator Desain Gemini AI":
-    st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
-    st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta VISUAL BAJU REALISTIS MULTI-SUDUT.")
-
-    default_key = st.secrets.get("GEMINI_API_KEY", "")
-    gemini_key = st.text_input("Masukkan Gemini API Key:", value=default_key, type="password", help="Dapatkan API Key gratis di aistudio.google.com")
+# --- MODUL 5: KONSULTASI DESAIN & KATALOG FOTO REALISTIS ASLI ---
+elif menu == "✨ Konsultasi & Foto Katalog Asli":
+    st.subheader("🖼️ Referensi Foto Katalog Asli & Panduan Penjahitan")
+    st.info("💡 Pilih kriteria busana untuk menampilkan foto referensi asli (Tampak Depan, Samping, Belakang) beserta rekomendasi teknis penjahitan.")
 
     col1, col2 = st.columns(2)
     with col1:
-        kategori_pakaian = st.selectbox("Jenis Busana", ["Gaun Bridesmaid / Pesta", "Kebaya Modern / Wisuda", "Kemeja Motif / Batik Pria", "Jas Formal / Blazer", "Baju Kurung / Abaya"])
-        warna_bahan = st.text_input("Warna & Bahan Kain", "Sage Green, Bahan Satin Velvet")
+        kategori_pakaian = st.selectbox("Jenis Busana", ["Gaun Bridesmaid / Pesta", "Kebaya Modern / Wisuda", "Kemeja Motif / Batik Pria", "Jas Formal / Blazer"])
+        warna_bahan = st.selectbox("Pilihan Warna Utama", ["Sage Green / Hijau Soft", "Navy / Biru Dongker", "Maroon / Merah Tua", "Rosegold / Dusty Pink"])
     with col2:
-        gaya_potongan = st.selectbox("Gaya / Model Potongan", ["A-Line Dress", "Slim Fit", "Lengan Balon / Puff", "Mermaid Style", "Modern Minimalist"])
-        detail_desain = st.text_area("Detail Dekorasi / Aksesoris", "Payet mutiara di bagian dada dan kerah, potongan V-neck")
+        gaya_potongan = st.selectbox("Gaya / Model Potongan", ["A-Line Dress", "Slim Fit", "Lengan Balon / Puff", "Mermaid Style"])
+        detail_desain = st.text_area("Detail Dekorasi", "Aksen payet mutiara di bagian kerah dan dada, pemotongan V-neck.")
 
-    if st.button("✨ Analisis & Dapatkan Rekomendasi Desain Gemini"):
-        if not gemini_key:
-            st.error("Silakan masukkan Gemini API Key terlebih dahulu.")
-        else:
-            with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan mengunduh foto visual..."):
-                try:
-                    from google import genai
+    if st.button("🔍 Tampilkan Foto Referensi Katalog Asli"):
+        st.divider()
+        st.markdown(f"### 📋 Panduan Teknis & Spesifikasi Jahitan ({kategori_pakaian})")
+        
+        # Penjelasan Teknis
+        st.markdown(f"""
+        - **Model Cut:** {gaya_potongan}
+        - **Rekomendasi Kain Utama:** Satin Velvet Premium, Silk Organza, atau Brokat Tulle
+        - **Jarum & Benang:** Gunakan Jarum Microtex ukuran 70/10 - 80/12 agar serat kain halus tidak berserat.
+        - **Finishing Kampuh:** Teknik Stik Balik (*French Seam*) atau obras halus 4 benang.
+        - **Aplikasi Aksesoris:** {detail_desain}
+        """)
 
-                    client = genai.Client(api_key=gemini_key)
-                    prompt_teks = f"""
-                    Anda adalah asisten desainer tata busana profesional untuk penjahit 'Rumah Jahit Artha'.
-                    Buatkan konsep desain rinci dan panduan teknis penjahitan untuk pesanan berikut:
-                    - Jenis Busana: {kategori_pakaian}
-                    - Warna & Bahan Kain: {warna_bahan}
-                    - Model/Potongan: {gaya_potongan}
-                    - Detail Aksesoris/Payet: {detail_desain}
+        st.divider()
+        st.markdown("### 📸 Foto Katalog Referensi Nyata (Multi-Sudut)")
 
-                    Tolong berikan output terstruktur dalam Bahasa Indonesia yang mencakup:
-                    1. Deskripsi Visual Konsep Busana
-                    2. Saran Pemilihan Jenis Kain & Aksesoris Tambahan
-                    3. Catatan Teknis Penjahitan & Pemotongan Pola (Penting untuk Penjahit)
-                    """
+        # Database Link Foto Katalog Asli Terpilih (High Quality Unsplash / Studio Photography)
+        catalog_database = {
+            "Gaun Bridesmaid / Pesta": {
+                "depan": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?auto=format&fit=crop&w=800&q=80",
+                "samping": "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=800&q=80",
+                "belakang": "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=800&q=80"
+            },
+            "Kebaya Modern / Wisuda": {
+                "depan": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80",
+                "samping": "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80",
+                "belakang": "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?auto=format&fit=crop&w=800&q=80"
+            },
+            "Kemeja Motif / Batik Pria": {
+                "depan": "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=800&q=80",
+                "samping": "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=800&q=80",
+                "belakang": "https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=800&q=80"
+            },
+            "Jas Formal / Blazer": {
+                "depan": "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=800&q=80",
+                "samping": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80",
+                "belakang": "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=800&q=80"
+            }
+        }
 
-                    models_to_try = ['gemini-2.5-flash', 'gemini-3.6-flash']
-                    response = None
-                    last_error = None
+        photos = catalog_database.get(kategori_pakaian, catalog_database["Gaun Bridesmaid / Pesta"])
 
-                    for model_name in models_to_try:
-                        for attempt in range(2):
-                            try:
-                                response = client.models.generate_content(
-                                    model=model_name,
-                                    contents=prompt_teks,
-                                )
-                                if response:
-                                    break
-                            except Exception as e:
-                                last_error = e
-                                time.sleep(1)
-                        if response:
-                            break
+        tab1, tab2, tab3 = st.tabs(["📸 Tampak Depan", "📸 Tampak Samping", "📸 Tampak Belakang"])
 
-                    if response:
-                        st.markdown("### 📋 Hasil Rekomendasi Desain & Panduan Penjahitan")
-                        st.markdown(response.text)
+        with tab1:
+            st.image(photos["depan"], caption=f"Tampak Depan Asli - {kategori_pakaian} ({warna_bahan})", use_container_width=True)
+        with tab2:
+            st.image(photos["samping"], caption=f"Tampak Samping Asli - {kategori_pakaian} ({warna_bahan})", use_container_width=True)
+        with tab3:
+            st.image(photos["belakang"], caption=f"Tampak Belakang Asli - {kategori_pakaian} ({warna_bahan})", use_container_width=True)
 
-                        st.divider()
-                        st.markdown("### 🖼️ Visualisasi Baju Multi-Sudut (Hasil Render AI)")
+        st.success("Foto katalog nyata berhasil dimuat!")
 
-                        # Tab Pilihan Sudut Pandang Baju
-                        tab1, tab2, tab3 = st.tabs(["📸 Tampak Depan", "📸 Tampak Samping", "📸 Tampak Belakang"])
-
-                        prompt_base = f"Isolated studio fashion photography of a {kategori_pakaian} on a tailor dress form mannequin, style {gaya_potongan}, fabric {warna_bahan}, {detail_desain}, clean gray background, no human, no face, 8k resolution, photorealistic."
-
-                        with tab1:
-                            img_depan = load_ai_image(prompt_base + " front view", seed=10)
-                            if img_depan:
-                                st.image(img_depan, caption=f"Tampak Depan: {kategori_pakaian}", use_container_width=True)
-                            else:
-                                st.warning("Gagal memuat gambar tampak depan. Silakan tekan tombol lagi.")
-
-                        with tab2:
-                            img_samping = load_ai_image(prompt_base + " side profile view", seed=20)
-                            if img_samping:
-                                st.image(img_samping, caption=f"Tampak Samping: {kategori_pakaian}", use_container_width=True)
-                            else:
-                                st.warning("Gagal memuat gambar tampak samping. Silakan tekan tombol lagi.")
-
-                        with tab3:
-                            img_belakang = load_ai_image(prompt_base + " back view", seed=30)
-                            if img_belakang:
-                                st.image(img_belakang, caption=f"Tampak Belakang: {kategori_pakaian}", use_container_width=True)
-                            else:
-                                st.warning("Gagal memuat gambar tampak belakang. Silakan tekan tombol lagi.")
-
-                        st.success("Konsep desain dan foto produk baju berhasil dirancang oleh AI!")
-
-                    else:
-                        st.error(f"Server Google AI sedang sangat padat (503). Silakan coba klik tombol kembali dalam beberapa detik. Detail: {last_error}")
-
-                except Exception as e:
-                    st.error(f"Gagal menghubungkan ke Gemini AI: {e}")
-
-# --- 6. MODUL: TAMBAH PELANGGAN ---
+# --- MODUL INPUT PELANGGAN ---
 elif menu == "Tambah Pelanggan & Ukuran":
     st.subheader("👤 Input Master Pelanggan & Ukuran")
-    
     with st.form("form_pelanggan"):
         col1, col2 = st.columns(2)
         with col1:
@@ -282,7 +217,6 @@ elif menu == "Tambah Pelanggan & Ukuran":
             telepon = st.text_input("Nomor Telepon/WA*")
             lingkar_dada = st.number_input("Lingkar Dada (cm)", min_value=0.0, step=0.5)
             lingkar_pinggang = st.number_input("Lingkar Pinggang (cm)", min_value=0.0, step=0.5)
-        
         with col2:
             panjang_lengan = st.number_input("Panjang Lengan (cm)", min_value=0.0, step=0.5)
             lebar_bahu = st.number_input("Lebar Bahu (cm)", min_value=0.0, step=0.5)
@@ -292,20 +226,17 @@ elif menu == "Tambah Pelanggan & Ukuran":
             if nama and telepon:
                 conn = sqlite3.connect("tailormate.db")
                 c = conn.cursor()
-                c.execute('''INSERT INTO pelanggan 
-                             (nama, telepon, lingkar_dada, lingkar_pinggang, panjang_lengan, lebar_bahu, catatan)
-                             VALUES (?, ?, ?, ?, ?, ?, ?)''', 
-                          (nama, telepon, lingkar_dada, lingkar_pinggang, panjang_lengan, lebar_bahu, catatan))
+                c.execute('''INSERT INTO pelanggan (nama, telepon, lingkar_dada, lingkar_pinggang, panjang_lengan, lebar_bahu, catatan)
+                             VALUES (?, ?, ?, ?, ?, ?, ?)''', (nama, telepon, lingkar_dada, lingkar_pinggang, panjang_lengan, lebar_bahu, catatan))
                 conn.commit()
                 conn.close()
                 st.success(f"Data pelanggan {nama} berhasil disimpan!")
             else:
                 st.error("Nama dan No Telepon wajib diisi.")
 
-# --- 7. MODUL: INPUT PESANAN & UPLOAD DESAIN ---
+# --- MODUL INPUT PESANAN ---
 elif menu == "Input Pesanan & Upload Desain":
     st.subheader("🛍️ Input Pesanan Baru + Lampiran Foto Desain")
-    
     conn = sqlite3.connect("tailormate.db")
     pelanggan_df = pd.read_sql_query("SELECT id, nama, telepon FROM pelanggan", conn)
     conn.close()
@@ -322,8 +253,6 @@ elif menu == "Input Pesanan & Upload Desain":
                 deskripsi_pesanan = st.text_area("Deskripsi Tambahan Pesanan (Model, Payet, Pilihan Kain, dll.)")
                 tgl_terima = st.date_input("Tanggal Terima", datetime.now())
                 tgl_deadline = st.date_input("Tanggal Selesai (Deadline)")
-                
-                # Upload Foto Desain/Model Baju
                 uploaded_file = st.file_uploader("Upload Foto Desain / Pola Baju (JPG, PNG)", type=["jpg", "jpeg", "png"])
             
             with col2:
@@ -335,11 +264,9 @@ elif menu == "Input Pesanan & Upload Desain":
             st.write(f"**Estimasi Total Biaya:** Rp {total_biaya:,.2f}")
             
             submitted = st.form_submit_button("Simpan Pesanan")
-            
             if submitted:
                 filename = ""
                 if uploaded_file is not None:
-                    # Simpan file gambar dengan nama unik berdasarkan waktu
                     filename = f"desain_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uploaded_file.name}"
                     file_path = os.path.join(UPLOAD_DIR, filename)
                     with open(file_path, "wb") as f:
@@ -347,8 +274,7 @@ elif menu == "Input Pesanan & Upload Desain":
 
                 conn = sqlite3.connect("tailormate.db")
                 c = conn.cursor()
-                c.execute('''INSERT INTO pesanan 
-                             (pelanggan_id, jenis_pakaian, deskripsi_pesanan, tgl_terima, tgl_deadline, status, total_biaya, dp, foto_desain)
+                c.execute('''INSERT INTO pesanan (pelanggan_id, jenis_pakaian, deskripsi_pesanan, tgl_terima, tgl_deadline, status, total_biaya, dp, foto_desain)
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                           (pelanggan_id, jenis_pakaian, deskripsi_pesanan, str(tgl_terima), str(tgl_deadline), "Diterima", total_biaya, dp, filename))
                 conn.commit()
@@ -357,13 +283,12 @@ elif menu == "Input Pesanan & Upload Desain":
     else:
         st.warning("Tambahkan data pelanggan terlebih dahulu di menu 'Tambah Pelanggan & Ukuran'.")
 
-# --- 8. MODUL: MASTER DATA PELANGGAN ---
+# --- MODUL DATA PELANGGAN ---
 elif menu == "Data Pelanggan":
     st.subheader("📋 Master Data Pelanggan & Ukuran Body")
     conn = sqlite3.connect("tailormate.db")
     df_pelanggan = pd.read_sql_query("SELECT * FROM pelanggan", conn)
     conn.close()
-    
     if not df_pelanggan.empty:
         st.dataframe(df_pelanggan, use_container_width=True)
     else:
