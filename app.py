@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import urllib.parse
 import pandas as pd
 import streamlit as st
 from PIL import Image
@@ -66,6 +67,7 @@ menu = st.sidebar.radio(
     [
         "Dashboard & Status Pesanan", 
         "🎨 Galeri Desain Baju", 
+        "✨ Generator Desain AI (Gratis)",
         "Tambah Pelanggan & Ukuran", 
         "Input Pesanan & Upload Desain", 
         "Data Pelanggan"
@@ -153,7 +155,35 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: TAMBAH PELANGGAN ---
+# --- 5. MODUL: GENERATOR DESAIN AI (100% GRATIS) ---
+elif menu == "✨ Generator Desain AI (Gratis)":
+    st.subheader("✨ Generator Referensi Desain Baju (100% Gratis)")
+    st.info("💡 Layanan AI ini sepenuhnya gratis dan tidak memerlukan API Key / pendaftaran.")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        kategori_pakaian = st.selectbox("Jenis Busana", ["Gaun Bridesmaid / Pesta", "Kebaya Modern / Wisuda", "Kemeja Motif / Batik Pria", "Jas Formal / Blazer", "Baju Kurung / Abaya"])
+        warna_bahan = st.text_input("Warna & Bahan Kain", "Sage Green, Bahan Satin Velvet")
+    with col2:
+        gaya_potongan = st.selectbox("Gaya / Model Potongan", ["A-Line Dress", "Slim Fit", "Lengan Balon / Puff", "Mermaid Style", "Modern Minimalist"])
+        detail_desain = st.text_area("Detail Dekorasi / Aksesoris", "Payet mutiara di bagian dada dan kerah, potongan V-neck")
+
+    # Membuat deskripsi gambar dalam Bahasa Inggris untuk AI
+    prompt_teks = f"Professional realistic photo of a luxury {kategori_pakaian}, style {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}, studio light, fashion mannequin display, 8k resolution"
+
+    if st.button("✨ Hasilkan Gambar Desain Gratis"):
+        with st.spinner("AI gratis sedang merancang gambar desain baju Anda... Mohon tunggu beberapa detik..."):
+            try:
+                # Menggunakan layanan Pollinations AI (Gratis & Tanpa API Key)
+                prompt_encoded = urllib.parse.quote(prompt_teks)
+                image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true"
+                
+                st.image(image_url, caption="Hasil Generasi Desain AI Gratis", use_container_width=True)
+                st.success("Gambar berhasil dibuat! Klik kanan pada gambar (atau tekan lama jika di HP) untuk menyimpan gambar.")
+            except Exception as e:
+                st.error(f"Gagal memuat gambar: {e}")
+
+# --- 6. MODUL: TAMBAH PELANGGAN ---
 elif menu == "Tambah Pelanggan & Ukuran":
     st.subheader("👤 Input Master Pelanggan & Ukuran")
     
@@ -184,7 +214,7 @@ elif menu == "Tambah Pelanggan & Ukuran":
             else:
                 st.error("Nama dan No Telepon wajib diisi.")
 
-# --- 6. MODUL: INPUT PESANAN & UPLOAD DESAIN ---
+# --- 7. MODUL: INPUT PESANAN & UPLOAD DESAIN ---
 elif menu == "Input Pesanan & Upload Desain":
     st.subheader("🛍️ Input Pesanan Baru + Lampiran Foto Desain")
     
@@ -239,7 +269,7 @@ elif menu == "Input Pesanan & Upload Desain":
     else:
         st.warning("Tambahkan data pelanggan terlebih dahulu di menu 'Tambah Pelanggan & Ukuran'.")
 
-# --- 7. MODUL: MASTER DATA PELANGGAN ---
+# --- 8. MODUL: MASTER DATA PELANGGAN ---
 elif menu == "Data Pelanggan":
     st.subheader("📋 Master Data Pelanggan & Ukuran Body")
     conn = sqlite3.connect("tailormate.db")
