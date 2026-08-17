@@ -155,7 +155,7 @@ elif menu == "🎨 Galeri Desain Baju":
     else:
         st.info("Belum ada foto desain baju yang diunggah pada pesanan.")
 
-# --- 5. MODUL: GENERATOR DESAIN GEMINI AI + GAMBAR OTOMATIS ---
+# --- 5. MODUL: GENERATOR DESAIN GEMINI AI (DUAL GEMINI MODEL) ---
 elif menu == "✨ Generator Desain Gemini AI":
     st.subheader("✨ Konsultasi & Generator Desain Busana (Google Gemini AI)")
     st.info("💡 Dapatkan rekomendasi gaya busana, rincian potongan bahan, dan saran teknis penjahitan beserta GAMBAR VISUAL otomatis dari AI.")
@@ -178,10 +178,9 @@ elif menu == "✨ Generator Desain Gemini AI":
         else:
             with st.spinner("Gemini AI sedang merancang konsep, panduan penjahitan, dan gambar visual..."):
                 try:
-                    import google.generativeai as genai
+                    from google import genai
 
-                    genai.configure(api_key=gemini_key)
-
+                    client = genai.Client(api_key=gemini_key)
                     prompt_teks = f"""
                     Anda adalah asisten desainer tata busana profesional untuk penjahit 'Rumah Jahit Artha'.
                     Buatkan konsep desain rinci dan panduan teknis penjahitan untuk pesanan berikut:
@@ -196,13 +195,27 @@ elif menu == "✨ Generator Desain Gemini AI":
                     3. Catatan Teknis Penjahitan & Pemotongan Pola (Penting untuk Penjahit)
                     """
 
-                    # Menggunakan SDK generativeai resmi
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    response = model.generate_content(prompt_teks)
+                    # Mencoba Model 1 (gemini-2.5-flash) terlebih dahulu
+                    try:
+                        response = client.models.generate_content(
+                            model='gemini-2.5-flash',
+                            contents=prompt_teks,
+                        )
+                    # Jika Model 1 error/sibuk, otomatis beralih ke Model 2 (gemini-3.6-flash)
+                    except Exception:
+                        st.warning("Peralihan otomatis ke Model Gemini Cadangan (gemini-3.6-flash)...")
+                        response = client.models.generate_content(
+                            model='gemini-3.6-flash',
+                            contents=prompt_teks,
+                        )
 
                     st.markdown("### 📋 Hasil Rekomendasi Desain & Panduan Penjahitan")
                     st.markdown(response.text)
 
+                    # Pembuatan Gambar Visual Fotorealistis (Manekin Studio)
+                    st.divider()
+                    st.markdown("### 🖼️ Visualisasi Gambar Desain Otomatis")
+                    
                     prompt_gambar = (
                         f"A ultra-realistic professional fashion photography catalog shot of a {kategori_pakaian}, "
                         f"style {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}. "
@@ -213,17 +226,7 @@ elif menu == "✨ Generator Desain Gemini AI":
                     image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true&model=flux"
 
                     st.image(image_url, caption=f"Visualisasi Desain Realistis: {kategori_pakaian} ({gaya_potongan})", use_container_width=True)
-                    st.success("Konsep desain dan gambar visual fotorealistis berhasil dirancang oleh AI!")
-
-                except Exception as e:
-                    st.error(f"Gagal menghubungkan ke Gemini AI: {e}")
-                    
-                    prompt_gambar = f"Professional realistic fashion photography of {kategori_pakaian}, style {gaya_potongan}, color and fabric: {warna_bahan}, details: {detail_desain}, studio lighting, mannequin display, 8k resolution"
-                    prompt_encoded = urllib.parse.quote(prompt_gambar)
-                    image_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true"
-
-                    st.image(image_url, caption=f"Visualisasi Desain: {kategori_pakaian} ({gaya_potongan})", use_container_width=True)
-                    st.success("Konsep desain dan gambar visual berhasil dirancang oleh AI!")
+                    st.success("Konsep desain dan gambar visual berhasil dirancang!")
 
                 except Exception as e:
                     st.error(f"Gagal menghubungkan ke Gemini AI: {e}")
